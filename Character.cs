@@ -3,7 +3,6 @@ using System.Collections;
 
 namespace CharacterPhysics
 {
-	[RequireComponent(typeof(Rigidbody))]
 	public class Character:MonoBehaviour
 	{
 
@@ -91,6 +90,35 @@ namespace CharacterPhysics
 			}
 		}
 
+		private Vector3 characterControllerVelocity;
+		public Vector3 velocity
+		{
+			get
+			{
+				return rigidbody.velocity;
+			}
+			set
+			{
+				rigidbody.velocity = value;
+			}
+		}
+
+		public float height
+		{
+			get
+			{
+				return capsuleCollider.height;
+			}
+		}
+
+		public float radius
+		{
+			get
+			{
+				return capsuleCollider.radius;
+			}
+		}
+
 		void Start()
 		{
 
@@ -100,9 +128,9 @@ namespace CharacterPhysics
 		{
 			RaycastHit[] hits;
 
-			float footRadius = capsuleCollider.radius*footRadiusScaler;
+			float footRadius = radius*footRadiusScaler;
 
-			float bottomFootOffset = (capsuleCollider.height*0.5f)+footOffset;
+			float bottomFootOffset = (height*0.5f)+footOffset;
 			float desiredStandOffset = bottomFootOffset-footOffset*(1.0f-footAnchorRatio);
 
 			Vector3 cPoint1 = transform.position+new Vector3(0, 0, 0);
@@ -162,7 +190,7 @@ namespace CharacterPhysics
 			if (groundObject)
 			{
 
-				Vector3 vel = rigidbody.velocity;
+				Vector3 vel = velocity;
 				if (vel.y <= groundVelocity.y)
 				{
 					Vector3 newPos = characterPos;
@@ -171,14 +199,13 @@ namespace CharacterPhysics
 					transform.position = newPos;
 					disableGrounding = false;
 				}
-
 				Debug.DrawLine(groundPos, groundPos+new Vector3(0, footOffset, 0), new Color(0, 0, 1, 1));
 			}
 
 
 			if (isGrounded)
 			{
-				Vector3 vel = rigidbody.velocity;
+				Vector3 vel = velocity;
 
 				Vector3 gv = groundVelocity;
 
@@ -193,14 +220,14 @@ namespace CharacterPhysics
 				vel.x = Mathf.Lerp(vel.x, gv.x, (groundedDrag*Time.fixedDeltaTime));
 				vel.z = Mathf.Lerp(vel.z, gv.z, (groundedDrag*Time.fixedDeltaTime));
 
-				rigidbody.velocity = vel;
+				velocity = vel;
 			}
 			else
 			{
-				Vector3 vel = rigidbody.velocity;
+				Vector3 vel = velocity;
 				vel.x /= 1.0f+(airLateralDrag*Time.fixedDeltaTime);
 				vel.z /= 1.0f+(airLateralDrag*Time.fixedDeltaTime);
-				rigidbody.velocity = vel;
+				velocity = vel;
 			}
 		}
 

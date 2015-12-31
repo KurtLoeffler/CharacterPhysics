@@ -8,6 +8,6 @@ namespace CharacterPhysics
 		GameObject gameObject { get; }
 		bool sticky { get; set; }
 		Vector3 GetVelocityAtPoint(Vector3 point);
-    }
+	}
 }
 
