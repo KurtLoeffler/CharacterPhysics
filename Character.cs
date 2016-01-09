@@ -1,11 +1,12 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace CharacterPhysics
 {
 	public class Character:MonoBehaviour
 	{
-
+		public bool automaticUpdate = true;
 		public float footRadiusScaler = 0.75f;
 		public float footOffset = 0.2f;
 		public float footAnchorRatio = 0.5f;
@@ -34,6 +35,7 @@ namespace CharacterPhysics
 			}
 		}
 
+		private List<IMovingPlatform> _componentCache = new List<IMovingPlatform>();
 		public IMovingPlatform movingPlatform
 		{
 			get
@@ -42,8 +44,13 @@ namespace CharacterPhysics
 				{
 					return null;
 				}
-				IMovingPlatform mp = groundObject.GetComponentInParent<IMovingPlatform>();
-				return mp;
+				_componentCache.Clear();
+				groundObject.GetComponentsInParent<IMovingPlatform>(false, _componentCache);
+				if (_componentCache.Count > 0)
+				{
+					return _componentCache[0];
+				}
+				return null;
 			}
 		}
 
@@ -51,16 +58,20 @@ namespace CharacterPhysics
 		{
 			get
 			{
-				IMovingPlatform mp = movingPlatform;
-				if (mp != null)
-				{
-					Vector3 localGroundPosition = mp.gameObject.transform.InverseTransformPoint(transform.position);
-					return mp.GetVelocityAtPoint(localGroundPosition);
-				}
-				else
-				{
-					return Vector3.zero;
-				}
+				return CalculateGroundVelocity(movingPlatform);
+			}
+		}
+
+		private Vector3 CalculateGroundVelocity(IMovingPlatform mp)
+		{
+			if (mp != null)
+			{
+				Vector3 localGroundPosition = mp.gameObject.transform.InverseTransformPoint(transform.position);
+				return mp.GetVelocityAtPoint(localGroundPosition);
+			}
+			else
+			{
+				return Vector3.zero;
 			}
 		}
 
@@ -126,6 +137,14 @@ namespace CharacterPhysics
 
 		void FixedUpdate()
 		{
+			if (automaticUpdate)
+			{
+				UpdateMotion(Time.fixedDeltaTime);
+			}
+		}
+
+		public void UpdateMotion(float deltaTime)
+		{
 			RaycastHit[] hits;
 
 			float footRadius = radius*footRadiusScaler;
@@ -186,30 +205,40 @@ namespace CharacterPhysics
 				}
 			}
 
+			IMovingPlatform cachedMovingPlatform = null;
+			Vector3 cachedGroundVelocity = Vector3.zero;
+
+			if (groundObject)
+			{
+				cachedMovingPlatform = movingPlatform;
+				if (cachedMovingPlatform != null)
+				{
+					cachedGroundVelocity = CalculateGroundVelocity(cachedMovingPlatform);
+				}
+			}
 
 			if (groundObject)
 			{
 
 				Vector3 vel = velocity;
-				if (vel.y <= groundVelocity.y)
+				if (vel.y <= cachedGroundVelocity.y)
 				{
 					Vector3 newPos = characterPos;
 					newPos.y = groundPos.y+desiredStandOffset;
-					newPos.y = Mathf.Lerp(characterPos.y, newPos.y, Time.deltaTime*stepSmoothing);
+					newPos.y = Mathf.Lerp(characterPos.y, newPos.y, deltaTime*stepSmoothing);
 					transform.position = newPos;
 					disableGrounding = false;
 				}
 				Debug.DrawLine(groundPos, groundPos+new Vector3(0, footOffset, 0), new Color(0, 0, 1, 1));
 			}
 
-
 			if (isGrounded)
 			{
 				Vector3 vel = velocity;
 
-				Vector3 gv = groundVelocity;
+				Vector3 gv = cachedGroundVelocity;
 
-				if (movingPlatform != null && movingPlatform.sticky)
+				if (cachedMovingPlatform != null && cachedMovingPlatform.sticky)
 				{
 					vel.y = gv.y;
 				}
@@ -217,16 +246,16 @@ namespace CharacterPhysics
 				{
 					vel.y = Mathf.Max(vel.y, gv.y);
 				}
-				vel.x = Mathf.Lerp(vel.x, gv.x, (groundedDrag*Time.fixedDeltaTime));
-				vel.z = Mathf.Lerp(vel.z, gv.z, (groundedDrag*Time.fixedDeltaTime));
+				vel.x = Mathf.Lerp(vel.x, gv.x, (groundedDrag*deltaTime));
+				vel.z = Mathf.Lerp(vel.z, gv.z, (groundedDrag*deltaTime));
 
 				velocity = vel;
 			}
 			else
 			{
 				Vector3 vel = velocity;
-				vel.x /= 1.0f+(airLateralDrag*Time.fixedDeltaTime);
-				vel.z /= 1.0f+(airLateralDrag*Time.fixedDeltaTime);
+				vel.x /= 1.0f+(airLateralDrag*deltaTime);
+				vel.z /= 1.0f+(airLateralDrag*deltaTime);
 				velocity = vel;
 			}
 		}
