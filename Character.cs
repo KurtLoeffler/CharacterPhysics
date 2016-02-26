@@ -6,6 +6,35 @@ namespace CharacterPhysics
 {
 	public class Character:MonoBehaviour
 	{
+		public class GroundInfo
+		{
+			public Collider collider;
+			public Vector3 position;
+			public Vector3 normal;
+			public Vector3 velocity;
+			public Vector3 angularVelocity;
+
+			private IMovingPlatform _movingPlatform;
+			static private List<IMovingPlatform> _componentCache = new List<IMovingPlatform>();
+			public IMovingPlatform movingPlatform
+			{
+				get
+				{
+					if (_movingPlatform == null)
+					{
+						_componentCache.Clear();
+						collider.gameObject.GetComponentsInParent<IMovingPlatform>(false, _componentCache);
+						if (_componentCache.Count > 0)
+						{
+							_movingPlatform = _componentCache[0];
+						}
+						
+					}
+					return _movingPlatform;
+				}
+			}
+		}
+
 		public bool automaticUpdate = true;
 		public float footRadiusScaler = 0.75f;
 		public float footOffset = 0.2f;
@@ -15,11 +44,8 @@ namespace CharacterPhysics
 
 		public float groundedDrag = 1.0f;
 		public float airLateralDrag = 0.1f;
-
-		public Vector3 groundPos { get; private set; }
-		public Vector3 groundNormal { get; private set; }
-		public Vector3 footNormal { get; private set; }
-		public GameObject groundObject { get; private set; }
+		
+		public GroundInfo groundInfo { get; private set; }
 
 		private bool disableGrounding = false;
 
@@ -31,34 +57,20 @@ namespace CharacterPhysics
 				{
 					return false;
 				}
-				return groundObject;
+				return groundInfo != null;
 			}
 		}
-
-		private List<IMovingPlatform> _componentCache = new List<IMovingPlatform>();
-		public IMovingPlatform movingPlatform
-		{
-			get
-			{
-				if (!groundObject)
-				{
-					return null;
-				}
-				_componentCache.Clear();
-				groundObject.GetComponentsInParent<IMovingPlatform>(false, _componentCache);
-				if (_componentCache.Count > 0)
-				{
-					return _componentCache[0];
-				}
-				return null;
-			}
-		}
-
+		
 		public Vector3 groundVelocity
 		{
 			get
 			{
-				return CalculateGroundVelocity(movingPlatform);
+				if (groundInfo == null)
+				{
+					return Vector3.zero;
+				}
+
+				return CalculateGroundVelocity(groundInfo.movingPlatform);
 			}
 		}
 
@@ -100,8 +112,7 @@ namespace CharacterPhysics
 				return _capsuleCollider;
 			}
 		}
-
-		private Vector3 characterControllerVelocity;
+		
 		public Vector3 velocity
 		{
 			get
@@ -159,11 +170,8 @@ namespace CharacterPhysics
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(footRadius,0,0),new Color(1,0,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(0,-footRadius,0),new Color(0,1,0,1));
-
-			groundPos = Vector3.zero;
-			groundNormal = Vector3.zero;
-			footNormal = Vector3.zero;
-			groundObject = null;
+			
+			groundInfo = null;
 
 			Vector3 characterPos = transform.position;
 			if (hits.Length > 0)
@@ -198,56 +206,59 @@ namespace CharacterPhysics
 
 				if (bestSpherecastHit.collider)
 				{
-					groundPos = bestSpherecastHit.point;
-					groundNormal = bestSpherecastHit.normal;
-					footNormal = bestSpherecastHit.normal;
-					groundObject = bestSpherecastHit.collider.gameObject;
+					groundInfo = new GroundInfo();
+					groundInfo.collider = bestSpherecastHit.collider;
+					groundInfo.position = bestSpherecastHit.point;
+					groundInfo.normal = bestSpherecastHit.normal;
+
+					if (groundInfo.movingPlatform != null)
+					{
+						groundInfo.velocity = groundInfo.movingPlatform.GetVelocityAtPoint(groundInfo.position);
+					}
+					else
+					{
+						Rigidbody groundRigidbody = groundInfo.collider.gameObject.GetComponentInParent<Rigidbody>();
+						if (groundRigidbody)
+						{
+							groundInfo.velocity = groundRigidbody.GetPointVelocity(groundInfo.position);
+							groundInfo.angularVelocity = groundRigidbody.transform.TransformDirection(groundRigidbody.angularVelocity);
+						}
+					}
 				}
 			}
-
-			IMovingPlatform cachedMovingPlatform = null;
-			Vector3 cachedGroundVelocity = Vector3.zero;
-
-			if (groundObject)
+			
+			if (groundInfo != null)
 			{
-				cachedMovingPlatform = movingPlatform;
-				if (cachedMovingPlatform != null)
-				{
-					cachedGroundVelocity = CalculateGroundVelocity(cachedMovingPlatform);
-				}
-			}
-
-			if (groundObject)
-			{
-
 				Vector3 vel = velocity;
-				if (vel.y <= cachedGroundVelocity.y)
+				if (vel.y <= groundInfo.velocity.y)
 				{
 					Vector3 newPos = characterPos;
-					newPos.y = groundPos.y+desiredStandOffset;
+					newPos.y = groundInfo.position.y+desiredStandOffset;
 					newPos.y = Mathf.Lerp(characterPos.y, newPos.y, deltaTime*stepSmoothing);
 					transform.position = newPos;
 					disableGrounding = false;
 				}
-				Debug.DrawLine(groundPos, groundPos+new Vector3(0, footOffset, 0), new Color(0, 0, 1, 1));
+				Debug.DrawLine(groundInfo.position, groundInfo.position+new Vector3(0, footOffset, 0), new Color(0, 0, 1, 1));
 			}
 
 			if (isGrounded)
 			{
+				IMovingPlatform cachedMovingPlatform = groundInfo.movingPlatform;
+
 				Vector3 vel = velocity;
-
-				Vector3 gv = cachedGroundVelocity;
-
+				
 				if (cachedMovingPlatform != null && cachedMovingPlatform.sticky)
 				{
-					vel.y = gv.y;
+					vel.y = groundInfo.velocity.y;
 				}
 				else
 				{
-					vel.y = Mathf.Max(vel.y, gv.y);
+					vel.y = Mathf.Max(vel.y, groundInfo.velocity.y);
 				}
-				vel.x = Mathf.Lerp(vel.x, gv.x, (groundedDrag*deltaTime));
-				vel.z = Mathf.Lerp(vel.z, gv.z, (groundedDrag*deltaTime));
+
+				float dragFactor = groundedDrag*deltaTime;
+				vel.x = Mathf.Lerp(vel.x, groundInfo.velocity.x, (dragFactor));
+				vel.z = Mathf.Lerp(vel.z, groundInfo.velocity.z, (dragFactor));
 
 				velocity = vel;
 			}
