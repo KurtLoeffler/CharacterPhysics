@@ -125,6 +125,22 @@ namespace CharacterPhysics
 			}
 		}
 
+		public float bottomFootOffset
+		{
+			get
+			{
+				return (height*0.5f)+footOffset;
+			}
+		}
+
+		public float standOffset
+		{
+			get
+			{
+				return bottomFootOffset-footOffset*(1.0f-footAnchorRatio);
+			}
+		}
+
 		public float height
 		{
 			get
@@ -160,11 +176,11 @@ namespace CharacterPhysics
 
 			float footRadius = radius*footRadiusScaler;
 
-			float bottomFootOffset = (height*0.5f)+footOffset;
-			float desiredStandOffset = bottomFootOffset-footOffset*(1.0f-footAnchorRatio);
+			float cachedBottomFootOffset = bottomFootOffset;
+			float cachedStandOffset = standOffset;
 
 			Vector3 cPoint1 = transform.position+new Vector3(0, 0, 0);
-			float shpherecastDistance = bottomFootOffset;
+			float shpherecastDistance = cachedBottomFootOffset;
 			hits = Physics.SphereCastAll(cPoint1, footRadius, new Vector3(0, -1, 0), shpherecastDistance);
 			//Vector3 shperecastEndPoint = cPoint1+(new Vector3(0,-1,0)*shpherecastDistance);
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
@@ -193,7 +209,7 @@ namespace CharacterPhysics
 					}
 
 					Vector3 localHitPoint = transform.InverseTransformPoint(hit.point);
-					if (localHitPoint.y < -bottomFootOffset)
+					if (localHitPoint.y < -cachedBottomFootOffset)
 					{
 						continue;
 					}
@@ -233,7 +249,7 @@ namespace CharacterPhysics
 				if (vel.y <= groundInfo.velocity.y)
 				{
 					Vector3 newPos = characterPos;
-					newPos.y = groundInfo.position.y+desiredStandOffset;
+					newPos.y = groundInfo.position.y+cachedStandOffset;
 					newPos.y = Mathf.Lerp(characterPos.y, newPos.y, deltaTime*stepSmoothing);
 					transform.position = newPos;
 					disableGrounding = false;
