@@ -35,6 +35,7 @@ namespace CharacterPhysics
 			}
 		}
 
+		public LayerMask standLayerMask = -1;
 		public bool automaticUpdate = true;
 		public float footRadiusScaler = 0.75f;
 		public float footOffset = 0.2f;
@@ -181,7 +182,7 @@ namespace CharacterPhysics
 
 			Vector3 cPoint1 = transform.position+new Vector3(0, 0, 0);
 			float shpherecastDistance = cachedBottomFootOffset;
-			hits = Physics.SphereCastAll(cPoint1, footRadius, new Vector3(0, -1, 0), shpherecastDistance);
+			hits = Physics.SphereCastAll(cPoint1, footRadius, new Vector3(0, -1, 0), shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore);
 			//Vector3 shperecastEndPoint = cPoint1+(new Vector3(0,-1,0)*shpherecastDistance);
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(footRadius,0,0),new Color(1,0,0,1));
