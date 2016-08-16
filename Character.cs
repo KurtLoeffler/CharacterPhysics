@@ -187,7 +187,7 @@ namespace CharacterPhysics
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(footRadius,0,0),new Color(1,0,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(0,-footRadius,0),new Color(0,1,0,1));
-			
+			//sadfasfsdf
 			groundInfo = null;
 
 			Vector3 characterPos = transform.position;
