@@ -243,18 +243,28 @@ namespace CharacterPhysics
 					}
 				}
 			}
-			
+
+			//float yVelocityAdd = 0;
 			if (groundInfo != null)
 			{
-				Vector3 vel = velocity;
-				if (vel.y <= groundInfo.velocity.y)
+				Vector3 vel = transform.InverseTransformDirection(velocity);
+				Vector3 groundVel = transform.InverseTransformDirection(groundInfo.velocity);
+				if (vel.y <= groundVel.y)
 				{
-					Vector3 newPos = characterPos;
-					newPos.y = groundInfo.position.y+cachedStandOffset;
-					newPos.y = Mathf.Lerp(characterPos.y, newPos.y, deltaTime*stepSmoothing);
-					transform.position = newPos;
+					Vector3 localCharPos = transform.InverseTransformPoint(characterPos);
+					Vector3 newPos = localCharPos;
+					Vector3 localGroundPos = transform.InverseTransformPoint(groundInfo.position);
+					newPos.y = localGroundPos.y+cachedStandOffset;
+
+					//float yDiff = newPos.y-localCharPos.y;
+					//yVelocityAdd = yDiff;
+
+					newPos.y = Mathf.Lerp(localCharPos.y, newPos.y, deltaTime*stepSmoothing);
+					transform.position = transform.TransformPoint(newPos);
+					
 					disableGrounding = false;
 				}
+
 				Debug.DrawLine(groundInfo.position, groundInfo.position+transform.up*footOffset, new Color(0, 0, 1, 1));
 			}
 
@@ -262,29 +272,28 @@ namespace CharacterPhysics
 			{
 				IMovingPlatform cachedMovingPlatform = groundInfo.movingPlatform;
 
-				Vector3 vel = velocity;
+				Vector3 vel = transform.InverseTransformDirection(velocity);
+				Vector3 localGroundVelocity = transform.InverseTransformDirection(groundInfo.velocity);
+
+				//vel.y += yVelocityAdd;
 				
-				if (cachedMovingPlatform != null && cachedMovingPlatform.sticky)
+				if (Vector3.Dot(groundInfo.normal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
-					vel.y = groundInfo.velocity.y;
+					vel = Vector3.ProjectOnPlane(vel, groundInfo.normal);
 				}
-				else
-				{
-					vel.y = Mathf.Max(vel.y, groundInfo.velocity.y);
-				}
-
+				
 				float dragFactor = groundedDrag*deltaTime;
-				vel.x = Mathf.Lerp(vel.x, groundInfo.velocity.x, (dragFactor));
-				vel.z = Mathf.Lerp(vel.z, groundInfo.velocity.z, (dragFactor));
+				vel.x = Mathf.Lerp(vel.x, localGroundVelocity.x, (dragFactor));
+				vel.z = Mathf.Lerp(vel.z, localGroundVelocity.z, (dragFactor));
 
-				velocity = vel;
+				velocity = transform.TransformDirection(vel);
 			}
 			else
 			{
-				Vector3 vel = velocity;
+				Vector3 vel = transform.InverseTransformDirection(velocity);
 				vel.x /= 1.0f+(airLateralDrag*deltaTime);
 				vel.z /= 1.0f+(airLateralDrag*deltaTime);
-				velocity = vel;
+				velocity = transform.TransformDirection(vel);
 			}
 		}
 
