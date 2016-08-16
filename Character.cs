@@ -182,7 +182,7 @@ namespace CharacterPhysics
 
 			Vector3 cPoint1 = transform.position+new Vector3(0, 0, 0);
 			float shpherecastDistance = cachedBottomFootOffset;
-			hits = Physics.SphereCastAll(cPoint1, footRadius, new Vector3(0, -1, 0), shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore);
+			hits = Physics.SphereCastAll(cPoint1, footRadius, -transform.up, shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore);
 			//Vector3 shperecastEndPoint = cPoint1+(new Vector3(0,-1,0)*shpherecastDistance);
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
 			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(footRadius,0,0),new Color(1,0,0,1));
@@ -204,7 +204,7 @@ namespace CharacterPhysics
 						continue;
 					}
 
-					if (Vector3.Angle(hit.normal, Vector3.up) > maxGroundAngle)
+					if (Vector3.Angle(hit.normal, transform.up) > maxGroundAngle)
 					{
 						continue;
 					}
@@ -255,7 +255,7 @@ namespace CharacterPhysics
 					transform.position = newPos;
 					disableGrounding = false;
 				}
-				Debug.DrawLine(groundInfo.position, groundInfo.position+new Vector3(0, footOffset, 0), new Color(0, 0, 1, 1));
+				Debug.DrawLine(groundInfo.position, groundInfo.position+transform.up*footOffset, new Color(0, 0, 1, 1));
 			}
 
 			if (isGrounded)
