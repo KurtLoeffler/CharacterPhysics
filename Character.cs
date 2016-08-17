@@ -243,8 +243,7 @@ namespace CharacterPhysics
 					}
 				}
 			}
-
-			//float yVelocityAdd = 0;
+			
 			if (groundInfo != null)
 			{
 				Vector3 vel = transform.InverseTransformDirection(velocity);
@@ -255,14 +254,12 @@ namespace CharacterPhysics
 					Vector3 newPos = localCharPos;
 					Vector3 localGroundPos = transform.InverseTransformPoint(groundInfo.position);
 					newPos.y = localGroundPos.y+cachedStandOffset;
-
-					//float yDiff = newPos.y-localCharPos.y;
-					//yVelocityAdd = yDiff;
-
+					
 					newPos.y = Mathf.Lerp(localCharPos.y, newPos.y, deltaTime*stepSmoothing);
 					transform.position = transform.TransformPoint(newPos);
 					
 					disableGrounding = false;
+					
 				}
 
 				Debug.DrawLine(groundInfo.position, groundInfo.position+transform.up*footOffset, new Color(0, 0, 1, 1));
@@ -274,12 +271,11 @@ namespace CharacterPhysics
 
 				Vector3 vel = transform.InverseTransformDirection(velocity);
 				Vector3 localGroundVelocity = transform.InverseTransformDirection(groundInfo.velocity);
-
-				//vel.y += yVelocityAdd;
+				Vector3 localGroundNormal = transform.InverseTransformDirection(groundInfo.normal);
 				
-				if (Vector3.Dot(groundInfo.normal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
+				if (Vector3.Dot(localGroundNormal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
-					vel = Vector3.ProjectOnPlane(vel, groundInfo.normal);
+					vel = Vector3.ProjectOnPlane(vel, localGroundNormal);
 				}
 				
 				float dragFactor = groundedDrag*deltaTime;
