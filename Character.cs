@@ -275,7 +275,12 @@ namespace CharacterPhysics
 				
 				if (Vector3.Dot(localGroundNormal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
+					float flatMag = Vector3.ProjectOnPlane(vel, transform.up).magnitude;
+
 					vel = Vector3.ProjectOnPlane(vel, localGroundNormal);
+
+					Vector3 newFlatVector = Vector3.ProjectOnPlane(vel, transform.up);
+					vel = Vector3.Project(vel, transform.up)+newFlatVector.normalized*Mathf.Max(newFlatVector.magnitude, flatMag);
 				}
 				
 				float dragFactor = groundedDrag*deltaTime;
