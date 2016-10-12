@@ -41,6 +41,7 @@ namespace CharacterPhysics
 		public float footOffset = 0.2f;
 		public float footAnchorRatio = 0.5f;
 		public float stepSmoothing = 50.0f;
+		public float stepSmoothingPullFactor = 1;
 		public float maxGroundAngle = 50.0f;
 
 		public float groundedDrag = 1.0f;
@@ -250,12 +251,18 @@ namespace CharacterPhysics
 				Vector3 groundVel = transform.InverseTransformDirection(groundInfo.velocity);
 				if (vel.y <= groundVel.y)
 				{
-					Vector3 localCharPos = transform.InverseTransformPoint(characterPos);
-					Vector3 newPos = localCharPos;
+					Vector3 newPos = Vector3.zero;
 					Vector3 localGroundPos = transform.InverseTransformPoint(groundInfo.position);
 					newPos.y = localGroundPos.y+cachedStandOffset;
-					
-					newPos.y = Mathf.Lerp(localCharPos.y, newPos.y, deltaTime*stepSmoothing);
+
+					float actualStepSmoothing = stepSmoothing;
+					if (newPos.y < 0)
+					{
+						actualStepSmoothing *= stepSmoothingPullFactor;
+						float groundDot = Vector3.Dot(transform.up, groundInfo.normal);
+						actualStepSmoothing = Mathf.Lerp(0, actualStepSmoothing, groundDot);
+					}
+					newPos.y = Mathf.Lerp(0, newPos.y, deltaTime*actualStepSmoothing);
 					transform.position = transform.TransformPoint(newPos);
 					
 					disableGrounding = false;
@@ -275,12 +282,15 @@ namespace CharacterPhysics
 				
 				if (Vector3.Dot(localGroundNormal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
-					float flatMag = Vector3.ProjectOnPlane(vel, transform.up).magnitude;
+					float flatMag = Vector3.ProjectOnPlane(vel, Vector3.up).magnitude;
 
 					vel = Vector3.ProjectOnPlane(vel, localGroundNormal);
 
-					Vector3 newFlatVector = Vector3.ProjectOnPlane(vel, transform.up);
-					vel = Vector3.Project(vel, transform.up)+newFlatVector.normalized*Mathf.Max(newFlatVector.magnitude, flatMag);
+					Vector3 newFlatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
+
+					newFlatVector = newFlatVector.normalized* Mathf.Max(newFlatVector.magnitude, flatMag);
+					vel.x = newFlatVector.x;
+					vel.z = newFlatVector.z;
 				}
 				
 				float dragFactor = groundedDrag*deltaTime;
