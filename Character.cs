@@ -47,6 +47,10 @@ namespace CharacterPhysics
 		public float stepSmoothingPullFactor = 1;
 		[Range(0, 90)]
 		public float maxGroundAngle = 50.0f;
+		[Range(0, 90)]
+		public float minSlideAngle = 0;
+		[Range(0, 90)]
+		public float maxSlideAngle = 0;
 
 		public float groundedDrag = 0.75f;
 		public float airLateralDrag = 0.1f;
@@ -196,11 +200,10 @@ namespace CharacterPhysics
 			//sadfasfsdf
 			groundInfo = null;
 
-			Vector3 characterPos = transform.position;
 			if (hits.Length > 0)
 			{
 				RaycastHit bestSpherecastHit = new RaycastHit();
-
+				float bestLocalHitY = Mathf.Infinity;
 				for (int i = 0; i < hits.Length; i++)
 				{
 					RaycastHit hit = hits[i];
@@ -210,7 +213,7 @@ namespace CharacterPhysics
 						continue;
 					}
 
-					if (Vector3.Angle(hit.normal, transform.up) > maxGroundAngle)
+					if (Vector3.Dot(hit.normal, transform.up) <= 0)
 					{
 						continue;
 					}
@@ -221,26 +224,32 @@ namespace CharacterPhysics
 						continue;
 					}
 
-					if (!bestSpherecastHit.collider || hit.distance < bestSpherecastHit.distance)
+					if (!bestSpherecastHit.collider || localHitPoint.y > bestLocalHitY)
 					{
 						bestSpherecastHit = hit;
+						bestLocalHitY = localHitPoint.y;
 					}
 				}
 
 				if (bestSpherecastHit.collider)
 				{
-					var epsilon = 0.00001f;
-					var ray = new Ray(bestSpherecastHit.point-bestSpherecastHit.normal*epsilon+transform.up*epsilon*4, -transform.up);
+					var epsilon = cachedBottomFootOffset*0.001f;
+					var ray = new Ray(bestSpherecastHit.point-bestSpherecastHit.normal*epsilon+transform.up*epsilon*2, -transform.up);
 					RaycastHit raycastHit;
-					if (Physics.Raycast(ray, out raycastHit, shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore))
+					if (bestSpherecastHit.collider.Raycast(ray, out raycastHit, shpherecastDistance))
 					{
 						bestSpherecastHit = raycastHit;
 					}
+
+					if (Vector3.Angle(bestSpherecastHit.normal, transform.up) > maxGroundAngle)
+					{
+						bestSpherecastHit = default;
+					}
 				}
 
 				if (bestSpherecastHit.collider)
 				{
-					
+					Debug.DrawRay(bestSpherecastHit.point, bestSpherecastHit.normal*shpherecastDistance, Color.red);
 					groundInfo = new GroundInfo();
 					groundInfo.collider = bestSpherecastHit.collider;
 					groundInfo.position = bestSpherecastHit.point;
@@ -293,17 +302,35 @@ namespace CharacterPhysics
 			{
 				IMovingPlatform cachedMovingPlatform = groundInfo.movingPlatform;
 
-				Vector3 vel = transform.InverseTransformDirection(velocity);
-				Vector3 localGroundVelocity = transform.InverseTransformDirection(groundInfo.velocity);
-				Vector3 localGroundNormal = transform.InverseTransformDirection(groundInfo.normal);
+				var vel = transform.InverseTransformDirection(velocity);
+				var localGroundVelocity = transform.InverseTransformDirection(groundInfo.velocity);
+				var localGroundNormal = transform.InverseTransformDirection(groundInfo.normal);
 				
 				if (Vector3.Dot(localGroundNormal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
-					float flatMag = Vector3.ProjectOnPlane(vel, Vector3.up).magnitude;
+					var flatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
+					float flatMag = flatVector.magnitude;
 
 					vel = Vector3.ProjectOnPlane(vel, localGroundNormal);
 
-					Vector3 newFlatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
+					float minSlide = minSlideAngle/360;
+					float maxSlide = maxSlideAngle/360;
+					float slideLength = maxSlide-minSlide;
+					{
+						float angle = (1-Vector3.Dot(localGroundNormal, Vector3.up));
+						float slideFactor = 0;
+						if (angle > minSlide)
+						{
+							slideFactor = 1;
+							if (slideLength > 0)
+							{
+								slideFactor = (angle-minSlide)/(slideLength);
+							}
+						}
+						vel = Vector3.Lerp(flatVector, vel, slideFactor);
+					}
+
+					var newFlatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
 					newFlatVector = newFlatVector.normalized* Mathf.Max(newFlatVector.magnitude, flatMag);
 					vel.x = newFlatVector.x;
 					vel.z = newFlatVector.z;
@@ -317,7 +344,7 @@ namespace CharacterPhysics
 			}
 			else
 			{
-				Vector3 vel = transform.InverseTransformDirection(velocity);
+				var vel = transform.InverseTransformDirection(velocity);
 				vel.x /= 1.0f+(airLateralDrag*deltaTime);
 				vel.z /= 1.0f+(airLateralDrag*deltaTime);
 				velocity = transform.TransformDirection(vel);
