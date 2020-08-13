@@ -37,14 +37,18 @@ namespace CharacterPhysics
 
 		public LayerMask standLayerMask = -1;
 		public bool automaticUpdate = true;
+		[Range(0, 1)]
 		public float footRadiusScaler = 0.75f;
 		public float footOffset = 0.2f;
+		[Range(0, 1)]
 		public float footAnchorRatio = 0.5f;
-		public float stepSmoothing = 50.0f;
+		public float stepSmoothing = 10;
+		[Range(0, 1)]
 		public float stepSmoothingPullFactor = 1;
+		[Range(0, 90)]
 		public float maxGroundAngle = 50.0f;
 
-		public float groundedDrag = 1.0f;
+		public float groundedDrag = 0.75f;
 		public float airLateralDrag = 0.1f;
 		
 		public GroundInfo groundInfo { get; private set; }
@@ -183,6 +187,7 @@ namespace CharacterPhysics
 
 			Vector3 cPoint1 = transform.position+new Vector3(0, 0, 0);
 			float shpherecastDistance = cachedBottomFootOffset;
+
 			hits = Physics.SphereCastAll(cPoint1, footRadius, -transform.up, shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore);
 			//Vector3 shperecastEndPoint = cPoint1+(new Vector3(0,-1,0)*shpherecastDistance);
 			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
@@ -224,6 +229,18 @@ namespace CharacterPhysics
 
 				if (bestSpherecastHit.collider)
 				{
+					var epsilon = 0.00001f;
+					var ray = new Ray(bestSpherecastHit.point-bestSpherecastHit.normal*epsilon+transform.up*epsilon*4, -transform.up);
+					RaycastHit raycastHit;
+					if (Physics.Raycast(ray, out raycastHit, shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore))
+					{
+						bestSpherecastHit = raycastHit;
+					}
+				}
+
+				if (bestSpherecastHit.collider)
+				{
+					
 					groundInfo = new GroundInfo();
 					groundInfo.collider = bestSpherecastHit.collider;
 					groundInfo.position = bestSpherecastHit.point;
@@ -262,11 +279,11 @@ namespace CharacterPhysics
 						float groundDot = Vector3.Dot(transform.up, groundInfo.normal);
 						actualStepSmoothing = Mathf.Lerp(0, actualStepSmoothing, groundDot);
 					}
-					newPos.y = Mathf.Lerp(0, newPos.y, deltaTime*actualStepSmoothing);
+					newPos.y = Mathf.Lerp(0, newPos.y, 1-Mathf.Exp(-actualStepSmoothing*deltaTime));
+					//newPos.y = Mathf.Lerp(0, newPos.y, actualStepSmoothing*deltaTime);
 					transform.position = transform.TransformPoint(newPos);
-					
+					rigidbody.position = transform.position;
 					disableGrounding = false;
-					
 				}
 
 				Debug.DrawLine(groundInfo.position, groundInfo.position+transform.up*footOffset, new Color(0, 0, 1, 1));
@@ -287,15 +304,14 @@ namespace CharacterPhysics
 					vel = Vector3.ProjectOnPlane(vel, localGroundNormal);
 
 					Vector3 newFlatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
-
 					newFlatVector = newFlatVector.normalized* Mathf.Max(newFlatVector.magnitude, flatMag);
 					vel.x = newFlatVector.x;
 					vel.z = newFlatVector.z;
 				}
 				
-				float dragFactor = groundedDrag*deltaTime;
-				vel.x = Mathf.Lerp(vel.x, localGroundVelocity.x, (dragFactor));
-				vel.z = Mathf.Lerp(vel.z, localGroundVelocity.z, (dragFactor));
+				float dragFactor = 1-Mathf.Exp(-groundedDrag*deltaTime);
+				vel.x = Mathf.Lerp(vel.x, localGroundVelocity.x, dragFactor);
+				vel.z = Mathf.Lerp(vel.z, localGroundVelocity.z, dragFactor);
 
 				velocity = transform.TransformDirection(vel);
 			}
