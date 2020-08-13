@@ -193,11 +193,6 @@ namespace CharacterPhysics
 			float shpherecastDistance = cachedBottomFootOffset;
 
 			hits = Physics.SphereCastAll(cPoint1, footRadius, -transform.up, shpherecastDistance, standLayerMask, QueryTriggerInteraction.Ignore);
-			//Vector3 shperecastEndPoint = cPoint1+(new Vector3(0,-1,0)*shpherecastDistance);
-			//Debug.DrawLine(cPoint1,shperecastEndPoint,new Color(1,1,0,1));
-			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(footRadius,0,0),new Color(1,0,0,1));
-			//Debug.DrawLine(cPoint1+(new Vector3(0,-1,0)*shpherecastDistance),shperecastEndPoint+new Vector3(0,-footRadius,0),new Color(0,1,0,1));
-			//sadfasfsdf
 			groundInfo = null;
 
 			if (hits.Length > 0)
@@ -288,7 +283,7 @@ namespace CharacterPhysics
 						actualStepSmoothing = Mathf.Lerp(0, actualStepSmoothing, groundDot);
 					}
 					newPos.y = Mathf.Lerp(0, newPos.y, 1-Mathf.Exp(-actualStepSmoothing*deltaTime));
-					//newPos.y = Mathf.Lerp(0, newPos.y, actualStepSmoothing*deltaTime);
+					
 					transform.position = transform.TransformPoint(newPos);
 					rigidbody.position = transform.position;
 					disableGrounding = false;
