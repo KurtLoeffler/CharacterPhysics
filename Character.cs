@@ -249,7 +249,6 @@ namespace CharacterPhysics
 
 				if (bestSpherecastHit.collider)
 				{
-					Debug.DrawRay(bestSpherecastHit.point, bestSpherecastHit.normal*shpherecastDistance, Color.red);
 					groundInfo = new GroundInfo();
 					groundInfo.collider = bestSpherecastHit.collider;
 					groundInfo.position = bestSpherecastHit.point;
