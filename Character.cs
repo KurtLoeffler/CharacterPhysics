@@ -70,32 +70,6 @@ namespace CharacterPhysics
 				return groundInfo != null;
 			}
 		}
-		
-		public Vector3 groundVelocity
-		{
-			get
-			{
-				if (groundInfo == null)
-				{
-					return Vector3.zero;
-				}
-
-				return CalculateGroundVelocity(groundInfo.movingPlatform);
-			}
-		}
-
-		private Vector3 CalculateGroundVelocity(IMovingPlatform mp)
-		{
-			if (mp != null)
-			{
-				Vector3 localGroundPosition = mp.gameObject.transform.InverseTransformPoint(transform.position);
-				return mp.GetVelocityAtPoint(localGroundPosition);
-			}
-			else
-			{
-				return Vector3.zero;
-			}
-		}
 
 		private Rigidbody _rigidbody;
 		new public Rigidbody rigidbody
@@ -299,7 +273,9 @@ namespace CharacterPhysics
 				var vel = transform.InverseTransformDirection(velocity);
 				var localGroundVelocity = transform.InverseTransformDirection(groundInfo.velocity);
 				var localGroundNormal = transform.InverseTransformDirection(groundInfo.normal);
-				
+
+				vel.y -= localGroundVelocity.y;
+
 				if (Vector3.Dot(localGroundNormal, vel.normalized) < 0 || (cachedMovingPlatform != null && cachedMovingPlatform.sticky))
 				{
 					var flatVector = Vector3.ProjectOnPlane(vel, Vector3.up);
@@ -329,11 +305,12 @@ namespace CharacterPhysics
 					vel.x = newFlatVector.x;
 					vel.z = newFlatVector.z;
 				}
-				
+
+				vel.y += localGroundVelocity.y;
+
 				float dragFactor = 1-Mathf.Exp(-groundedDrag*deltaTime);
 				vel.x = Mathf.Lerp(vel.x, localGroundVelocity.x, dragFactor);
 				vel.z = Mathf.Lerp(vel.z, localGroundVelocity.z, dragFactor);
-
 				velocity = transform.TransformDirection(vel);
 			}
 			else
