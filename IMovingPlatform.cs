@@ -6,7 +6,7 @@ namespace CharacterPhysics
 	public interface IMovingPlatform
 	{
 		GameObject gameObject { get; }
-		bool sticky { get; set; }
+		bool sticky { get; }
 		Vector3 GetVelocityAtPoint(Vector3 point);
 	}
 }
